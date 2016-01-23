@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# This file is part of Cilia.
+# 
+# Copyright (C) 2016  Mikael Brockman
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# usage: interleave-fds <log-file> <subcommand>...
+#
+# Use FIFOs to implement a marked-up interleaved stream of
+# lines from both stdout and stderr.  Also log to a separate
+# file.
+
+set -eu
+
+logfile="$1" ; shift
+subcommand="$@"
+
+# Create named pipes (FIFOs) for stdout and stderr.
+# We will send the subcommand's output to these pipes,
+# and read lines from them with two other subprocesses.
+
+stdout=`mktemp -u` stderr=`mktemp -u`
+mkfifo "$stdout" "$stderr"
+
+# Now for a long rant about signal handling, process groups,
+# and job control.  Read only if you're curious.  This is
+# stuff I unfortunately had to figure out while investigating
+# why Ctrl-C wasn't letting the subcommand exit gracefully.
+#
+# We start cat processes that become the read ends of the FIFOs.
+# The problem is that those processes are killed immediately when
+# this shell script gets a SIGTERM; and then the subprocess gets
+# EPIPE errors when trying to write stuff to stdout or stderr.
+#
+# That's a problem, because many programs don't handle EPIPE
+# gracefully.  For example, Docker Compose in foreground mode
+# doesn't shut down containers on EPIPE.
+#
+# Therefore, we want the subcommand to exit first.
+#
+# Why is it that the cat subprocesses are killed immediately,
+# regardless of any trap commands we run?  Here's why:
+#
+# In non-interactive mode, bash does not enable job control.
+# This absence of job control has an effect on the assignment of
+# process groups to background processes: namely, all background
+# processes get the same process group as the shell itself.
+#
+# And so when a signal is sent to the shell, that signal is also
+# automatically (by the kernel) sent to all its children who have
+# the same process group...  Aha!  That means if the shell is killed,
+# all background processes will be killed simultaneously.
+#
+# Thus... we need to enable job control:
+
+set -m # enable job control
+
+# Now we can start the pipe-reading processes in the background.
+# They in turn will die of EPIPE when the subcommand dies,
+# but that just means we don't have to bother killing them.
+
+( cat "$stderr" | sed -e 's/^\(.*\)$/<stderr>\1<\/stderr>/' |
+    while true; do
+      read line
+      echo "$line" >> "$logfile"
+      echo "$line"
+    done
+) &
+
+( cat "$stdout" | sed -e 's/^\(.*\)$/<stdout>\1<\/stdout>/' |
+    while true; do
+      read line
+      echo "$line" >> "$logfile"
+      echo "$line"
+    done
+) &
+
+exec "$@" 2>"$stderr" >"$stdout"
