@@ -1,6 +1,6 @@
 # Cilia
 
-Cilia combines *staging* and *testing* for **continuous integration**
+Cilia combines *staging* and *testing* for **continuous integration
 and QA** of web applications.  It's supposed to be simple, robust, and
 fast.  Uses include
 
