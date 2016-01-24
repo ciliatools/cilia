@@ -33,6 +33,13 @@ var vhosts = {}
 
 var proxy = Proxy.createProxyServer()
 
+proxy.on("error", function(err, req, res) {
+  res.writeHead(500, {
+    "Content-Type": "text-plain"
+  })
+  res.end("proxy error")
+})
+
 function browse() {
   return new Promise(function(resolve, reject) {
     Docker.get("/containers/json", { json: true }, function(err, containers) {
@@ -140,7 +147,7 @@ function getIpForCommit(commit) {
           // Nope, that commit isn't running.
           reject(new Error("no container for " + commit))
         }
-      }).catch(function(err) {
+      }, function(err) {
         reject(err)
       })
     }
@@ -151,23 +158,38 @@ function getIpForCommit(commit) {
 // Proxies requests to containers.
 function handle(req, res) {
   var host = req.headers.host
+  var url = req.url
 
-  if (host.match(/^([a-z0-9]{40})\.*/)) {
+  if (host && host.match(/^([a-z0-9]{40})\..*/)) {
     proxyToContainer(req, res, RegExp.$1)
+  } else if (host && host.match(/^cilia\..*/)) {
+    if (url.startsWith("/api/")) {
+      proxyToApi(req, res)
+    } else {
+      proxyToWebpack(req, res)
+    }
   } else {
     res.statusCode = 404
     res.end("Nope")
   }
 }
 
-function proxyToContainer (req, res, commit) {
-  getIpForCommit(RegExp.$1).then(function(ip) {
+function proxyToContainer(req, res, commit) {
+  getIpForCommit(commit).then(function(ip) {
     proxy.web(req, res, { target: "http://" + ip })
-  }).catch(function(err) {
+  }, function(err) {
     console.error(err)
     res.statusCode = 404
     res.end("Nope")
   })
+}
+
+function proxyToWebpack(req, res) {
+  proxy.web(req, res, { target: "http://webpack" })
+}
+
+function proxyToApi(req, res) {
+  proxy.web(req, res, { target: "http://api" })
 }
 
 function sleep(ms) {

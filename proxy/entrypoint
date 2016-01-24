@@ -1,0 +1,4 @@
+#!/bin/sh
+until curl -sI api/api/
+do echo waiting for api; sleep 2; done
+echo ok; exec node server

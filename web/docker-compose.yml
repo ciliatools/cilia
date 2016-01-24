@@ -1,0 +1,31 @@
+version: 2
+services:
+  proxy:
+    build: ../proxy
+    ports:
+      - "80:80"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - cilia
+      - internal
+  api:
+    build: ../api
+    volumes:
+      - "${CILIA_ROOT}:/cilia"
+    networks:
+      - cilia
+  webpack:
+    build: .
+    volumes:
+      - "./src:/app/src:ro"
+    networks:
+      - internal
+      
+networks:
+  cilia:
+    external: true
+  internal:
+    driver: bridge
+
+    

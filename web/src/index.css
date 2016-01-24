@@ -1,0 +1,141 @@
+/*
+ * This file is part of Cilia.
+ * 
+ * Copyright (C) 2016  Mikael Brockman
+ * 
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as
+ * published by the Free Software Foundation, either version 3 of the
+ * License, or (at your option) any later version.
+ * 
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ * 
+ * You should have received a copy of the GNU Affero General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+html { font: 16px/20px monospace; color: #333 }
+html { font-family: "fantasque sans mono", "inconsolata", "menlo", monospace }
+body { margin: 0; overflow: hidden; }
+body { background: #fafafa; }
+
+b { color: #000 }
+a { color: inherit }
+
+/* project, run, log, stdout, stderr, time { display: block; } */
+
+/* project { position: absolute; top: 0; right: 0; left: 0; bottom: 0; } */
+/* project { overflow: hidden; padding-bottom: 1em; } */
+/* project { display: flex; flex-direction: column; } */
+/* project { max-width: 50em; margin: 0 auto; } */
+
+/* main { overflow: scroll; height: 100%; padding-bottom: 2em; } */
+
+/* nav { flex-shrink: 0; width: 100%; } */
+/* nav { padding: 0.3em 1em; } */
+/* nav { background: white; } */
+/* nav { z-index: 1; box-shadow: 0 -10px 20px grey; } */
+/* nav h1 { display: inline-block; font: inherit; } */
+/* nav h1 { font-weight: bold; background: white; } */
+/* nav h1 { border-radius: 4px; padding: 0 0.5em; opacity: 0.7 } */
+/* nav h1 { */
+/*   margin: 0; */
+/*   background-color: #bbb; */
+/*   color: white; */
+/* } */
+
+/* commit, time, stdout, stderr { */
+/*   white-space: pre-wrap; */
+/*   width: 100%; */
+/* } */
+
+/* button { */
+/*   border: 1px solid #aaa; */
+/*   background: inherit; */
+/*   border-radius: 5px; */
+/*   font: inherit; */
+/*   padding: 0 0.5em; */
+/* } */
+
+/* button.on { background-color: #eee; } */
+
+/* stderr { opacity: 0.7; font-style: italic; } */
+
+/* run { margin: 0; } */
+/* commit { border-bottom: 4px solid rgba(255,255,255,0.4); } */
+
+/* run commit { */
+/*   display: inline-block; */
+/*   padding: 0.5em 1em; */
+/* } */
+
+/* log { padding: 0 1em; } */
+
+/* run[data-status=skip] { opacity: 0.5; } */
+
+/* run[data-status=running] commit { */
+/*   background-color: #8db4d4; */
+/*   color: white; */
+/*   box-shadow: 0 4px 30px rgba(0, 0, 20, 0.6); */
+/* } */
+
+/* run[data-status=failed] commit { */
+/*   background-color: rgba(139, 0, 0, 0.69); */
+/*   color: ivory; */
+/* } */
+
+/* run[data-status=cancelled] commit { */
+/*   background-color: rgba(139, 0, 0, 0.69); */
+/*   color: ivory; */
+/* } */
+
+/* run[data-status=succeeded] commit { */
+/*   background-color: rgb(35, 193, 130); */
+/*   color: ivory; */
+/* } */
+
+/* run { overflow: hidden } */
+/* run:not(:target) log { display: none } */
+
+/* run log { */
+/*   padding-top: 1em; */
+/*   background: rgba(0, 0, 0, 0.8); */
+/*   color: ivory; */
+/* } */
+
+/* html[data-hash=""] run[data-status=running] log { */
+/*   display: block; */
+/*   overflow: scroll; */
+/*   max-height: 14em; */
+/*   margin-top: 0; */
+/*   padding-bottom: 1em; */
+/*   border-bottom: 4px solid rgba(255, 255, 255, 0.25); */
+/* } */
+
+/* /\* Use :target to only show the selected run. *\/ */
+/* html[data-hash] run:not(:target) { display: none } */
+/* html[data-hash=""] run { display: block !important } */
+
+/* /\* Back link when a run is selected. *\/ */
+/* nav > a { text-decoration: none } */
+/* html[data-hash^="#"] nav > a { border-bottom: 1px solid currentcolor } */
+/* html[data-hash^="#"] nav > a::before { content: "Back to " } */
+
+/* run:target { */
+/*   position: relative; */
+/*   display: flex; */
+/*   flex-direction: column; */
+/*   height: 100%; */
+/* } */
+
+/* html[data-hash^="#"] main { overflow: hidden; } */
+
+/* run:target > * { flex-shrink: 0; } */
+/* run:target log { */
+/*   overflow: scroll; */
+/*   flex: 1; */
+/*   padding-bottom: 4em; */
+/* } */
