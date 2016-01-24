@@ -114,7 +114,6 @@ module.exports = {
     },
     title: {
       fontWeight: "bold",
-      textTransform: "uppercase",
       marginRight: "1rem",
     },
     commit: {

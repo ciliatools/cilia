@@ -167,9 +167,6 @@ class InstanceRoute extends React.Component {
       <div style={styles.wideRoot}>
         <WideNavBar>
           <b style={styles.project.title}>{project.name}</b>
-          <span style={styles.project.commit.sha}>
-            { hash.substr(0, 10) }
-          </span>
           <CommitDetails
             { ...{ time, project, commit, simple: true } } />
           <CommitStatusIndicator {... { project, commit } } />
