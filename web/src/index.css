@@ -17,7 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-html { font: 16px/20px monospace; color: #333 }
+* { box-sizing: border-box; }
+html { font: 18px/24px monospace; color: #333 }
 html { font-family: "fantasque sans mono", "inconsolata", "menlo", monospace }
 body { margin: 0; overflow: hidden; }
 body { background: #fafafa; }

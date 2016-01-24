@@ -3,7 +3,7 @@ ENV NODE_PATH=/node_modules
 RUN npm install -g webpack-dev-server
 RUN npm install webpack react react-dom html-webpack-plugin \
   style-loader css-loader imports-loader exports-loader \
-  whatwg-fetch moment \
+  whatwg-fetch moment ansi_up \
   babel-loader babel-core babel-preset-es2015 babel-preset-react \
   babel-plugin-transform-object-rest-spread
 RUN mkdir /app

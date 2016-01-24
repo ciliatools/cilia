@@ -23,13 +23,15 @@ let styles = require("./styles")
 let React = require("react")
 let DOM = require("react-dom")
 let moment = require("moment")
+let ansi = require("ansi_up")
 
 let state = {
   time: (new Date).toISOString(),
   requests: [],
   route: { index: true },
-  projects: {
-  }
+  projects: { },
+  taskDetails: { },
+  pings: { },
 }
 
 window.state = state
@@ -85,6 +87,20 @@ let api = {
       change({ ...state, requests: remove(request, state.requests) })
       return x
     })
+  },
+ post: (url, body, type) => {
+    let request = { method: "POST", url: url }
+    change({ ...state, requests: [...state.requests, request] })
+    return fetch(url, {
+      method: "POST",
+      body: body,
+      headers: {
+        "Content-Type": type || "text/plain",
+      },
+    }).then(x => {
+      change({ ...state, requests: remove(request, state.requests) })
+      return x
+    })
   }
 }
 
@@ -129,7 +145,7 @@ class Loading extends React.Component {
       <div style={styles.loading}>
         <div>Loading...</div>
         <br/>
-        <div style={{ opacity: 0.5 }}>
+        <div style={{ opacity: 0.3 }}>
           {this.props.requests.map((x, i) =>
             <div key={i}>{x.method} {x.url}</div>)}
         </div>
@@ -156,8 +172,123 @@ class InstanceRoute extends React.Component {
           </span>
           <CommitDetails
             { ...{ time, project, commit, simple: true } } />
+          <CommitStatusIndicator {... { project, commit } } />
         </WideNavBar>
         <iframe style={styles.iframe} src={`http://${host}`} />
+      </div>
+    )
+  }
+}
+
+class TaskPill extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { open: false }
+  }
+
+  color() {
+    return {
+      started: "cornflowerblue",
+      cancelling: "cyan",
+      cancelled: "darkcyan",        
+      succeeded: "#25d25a",
+      failed: "salmon",
+      waiting: "lightgrey",
+    }[this.getStatus()]
+  }
+
+  getStatus() { return this.getTask().status || "waiting" }
+  getTask() { return this.props.commit.tasks[this.props.taskName] }
+
+  borderColor() {
+    return "rgba(255, 255, 255, 0.3)"
+  }
+
+  render() {
+    let style = {
+      ...styles.pill,
+      ...{ backgroundColor: this.color(), color: "white" },
+      ...{ borderColor: this.borderColor() },
+    }
+    
+    return (
+      <div style={{ position: "relative", display: "inline-flex" }}
+            onMouseEnter={() => this.setState({ open: true }) }
+            onMouseLeave={() => this.setState({ open: false }) }>
+        <div style={style}>
+          {this.props.taskName}
+        </div>
+        {(this.state.open || this.props.horizontal) && this.renderMenu()}
+      </div>
+    )
+  }
+
+  renderMenu() {
+    let status = this.getStatus()
+
+    let options = []
+    let props = this.props
+    if (this.props.text == "up" && status == "started")
+      options.push(<PillOption {...props} action="visit" />)
+    if (status == "succeeded" || status == "failed")
+      options.push(<PillOption {...props} action="start" />)
+    if (status == "cancelled" || status == "waiting")
+      options.push(<PillOption {...props} action="start" />)
+    if (status == "started")
+      options.push(<PillOption {...props} action="stop" />)
+
+    let style = {
+      ...styles.dropdown.container,
+      ...(this.props.horizontal ? {
+            position: "relative",
+            display: "flex",
+            flexDirection: "row",
+          } : {})
+    }
+
+    return (
+      <div style={style}>
+        <div style={{
+          textTransform: "uppercase",
+          backgroundColor: this.color(),
+          borderColor: this.borderColor(),
+          color: "white",
+          padding: "0 .5rem",
+          minWidth: "6rem"
+        }}>{status}</div>
+        <div style={{
+          display: "flex",
+          flexDirection: this.props.horizontal ? "row" : "column",
+          border: "1px solid #eee",
+          borderTopWidth: 0,
+        }}>
+          {options}
+        </div>
+      </div>
+    )
+  }
+}
+
+class PillOption extends React.Component {
+  constructor(props) {
+    super(props)
+    this.onClick = this.onClick.bind(this)
+  }
+
+  onClick() {
+    let project = this.props.project.name
+    let hash = this.props.commit.sha
+    let task = this.props.taskName
+    api.post(
+      `/api/projects/${project}/commits/${hash}/tasks/${task}/request`,
+      this.props.action
+    ).catch(e => alert(e.toString()))
+  }
+
+  render() {
+    return (
+      <div style={{ margin: "0 0.5rem", cursor: "pointer" }} onClick={this.onClick}>
+        {this.props.action}
       </div>
     )
   }
@@ -166,35 +297,13 @@ class InstanceRoute extends React.Component {
 class CommitStatusIndicator extends React.Component {
   render() {
     let { commit, project } = this.props
-    let status = commit.run ? commit.run.status : "waiting"
-    let element
-    if (commit.run && commit.run.status == "running") {
-      element =
-        <a href={`#/instance/${project.name}/${commit.sha}`}
-           style={{ textDecoration: "none" }}>
-          running
-        </a>
-    } else {
-      element =
-        <span>{status}</span>
-    }
-
-    let colors = {
-      running: "skyblue",
-      cancelled: "darkcyan",
-      succeeded: "darkgreen",
-      failed: "salmon",
-      waiting: "lightgrey",
-    }
-
-    let style = {
-      ...styles.project.commit.status,
-      ...({ backgroundColor: colors[status] })
-    }
-
+    let tasks = Object.keys(commit.tasks).map(x =>
+      <TaskPill key={x} taskName={x}
+        commit={commit} project={project} />
+    )
     return (
-      <span style={style}>
-        {element}
+      <span style={{ textAlign: "right" }}>
+        {tasks}
       </span>
     )
   }
@@ -203,7 +312,7 @@ class CommitStatusIndicator extends React.Component {
 class Sha extends React.Component {
   render() {
     let { project, commit } = this.props
-    let short = commit.sha.substr(0, 10)
+    let short = commit.sha.substr(0, 8)
     return (
       <a href={`#/projects/${project.name}/${commit.sha}`}>
         {short}
@@ -223,27 +332,62 @@ class CommitDetails extends React.Component {
       <span style={styles.project.commit.message}>
         {commit.message}
       </span>
+    let date =
+      <span style={styles.project.commit.date}>
+        {moment(commit.date).calendar(time)}
+      </span>
     return (
       <span style={styles.project.commit.details}>
         { sha }
-        { !simple && <CommitStatusIndicator { ...{ commit, project } } /> }
         <span style={styles.project.commit.name}>
-          {commit.author.name}
+          {commit.author.email.replace(/@.*/, "")}
         </span>
-        <span style={styles.project.commit.date}>
-          {moment(commit.date).from(time)}
-        </span>
-        { !simple && message }
+        { !simple && date }
+        { message }
+        { !simple && <CommitStatusIndicator { ...{ commit, project } } /> }
       </span>
     )
   }
 }
 
+let plural = (count, noun) =>
+  `${count} ${noun}${count == 1 ? "" : "s"}`
+
+let values = x => Object.keys(x).map(k => x[k])
+
+let countProjects = () => values(state.projects).length
+let countRunningTasks = () => {
+  let n = 0
+  values(state.projects).forEach(project => {
+    project.commits.forEach(commit => {
+      values(commit.tasks).forEach(task => {
+        if (task.status == "started")
+          n++
+      })
+    })
+  })
+  return n
+}
+
+let sortCommits = commits =>
+  [].concat(commits).sort((a, b) => +(moment(b.date)) - +(moment(a.date)))
+
 class IndexRoute extends React.Component {
   render() {
+    let text =
+      `${plural(countProjects(), "project")}.
+       ${plural(countRunningTasks(), "running task")}.`
+
+    if (countProjects() == 0)
+      return <Loading {...this.props} />
+
     return (
       <div style={styles.root}>
-        <NavBar/>
+        <NavBar>
+          <span style={{ opacity: 0.8 }}>
+            {text}
+          </span>
+        </NavBar>
         <div style={styles.main}>
           {this.renderProjectList()}
         </div>
@@ -268,7 +412,7 @@ class IndexRoute extends React.Component {
           {item}
         </div>
         <div>
-          {project.commits.map(
+          {sortCommits(project.commits).map(
             (x, i) => this.renderCommit(project, x, i))}
         </div>
       </div>
@@ -284,25 +428,105 @@ class IndexRoute extends React.Component {
   }
 }
 
+let requestTaskDetails = ({ project, hash }) =>
+  api.get(`/api/projects/${project}/commits/${hash}`).then(
+    details => change({
+      ...state,
+      taskDetails: {
+        ...state.taskDetails,
+        [hash]: details
+      }
+    })
+  )
+
+setInterval(() => {
+  initialize()
+  if (state.route.commit) {
+    requestTaskDetails(state.route.commit)
+  }
+}, 2000)
+
 class CommitRoute extends React.Component {
+  componentWillMount() {
+    if (!this.getTaskDetails())
+      requestTaskDetails(this.props.route.commit)
+  }
+
+  getTaskDetails() {
+    return this.props.taskDetails[this.props.route.commit.hash]
+  }
+
   render() {
     let { project, hash } = this.props.route.commit
+
+    let taskDetails = this.getTaskDetails()
+    if (!taskDetails) return <Loading {...this.props} />
+      
     project = getProject(project)
     if (!project) return <Loading {...this.props} />
+    
     let commit = getCommit(project, hash)
     return (
       <div style={styles.root}>
         <NavBar>
-          <span style={styles.project.title}>
-            { project.name }
-          </span>
           <CommitDetails {... { project, commit, simple: true } } />
           <CommitStatusIndicator {... { project, commit } } />
         </NavBar>
         <div style={styles.main}>
-          <div>PID: {commit.run.pid}</div>
-          <div>Started: {commit.run.started}</div>
+          <div style={{ marginTop: ".5rem" }}>
+            <a href={`#/instance/${project.name}/${hash}`}>
+              Visit this commit
+            </a>
+          </div>
+          { this.renderTasks({ project, commit, taskDetails }) }
         </div>
+      </div>
+    )
+  }
+
+  renderTasks({ project, commit, taskDetails }) {
+    return Object.keys(commit.tasks).map(taskName =>
+      <TaskDetails {...{
+        key: taskName,
+        project, commit, taskName,
+        details: taskDetails[taskName]
+      }} />
+    )
+  }
+}
+
+class TaskLog extends React.Component {
+  componentDidMount() {
+    this.refs.node.scrollTop = this.refs.node.scrollHeight
+  }
+
+  render() {
+    return (
+      <div style={{
+             whiteSpace: "pre-wrap",
+             padding: ".5rem 1rem",
+             maxHeight: "24ex",
+             overflow: "scroll",
+             background: "#555",
+             color: "ivory",
+           }}
+        ref="node"
+        dangerouslySetInnerHTML={{
+          __html: ansi.ansi_to_html(this.props.log)
+        }}>
+      </div>
+    )
+  }
+}
+
+class TaskDetails extends React.Component {
+  render() {
+    let { project, commit, taskName, details } = this.props
+    return (
+      <div style={{ margin: "0.5rem 0 0 0" }}>
+        <TaskPill taskName={taskName} horizontal={true}
+                  project={project} commit={commit} />
+        { details.log && <TaskLog log={details.log} /> }
       </div>
     )
   }

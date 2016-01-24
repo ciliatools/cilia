@@ -82,10 +82,30 @@ module.exports = {
   main: {
     overflow: "scroll",
     height: "100%",
+    marginLeft: "0.5rem",
   },
   iframe: {
     height: "100%",
     border: "none",
+  },
+  pill: {
+    textTransform: "uppercase",
+    padding: "0 .5rem",
+    cursor: "pointer",
+    display: "inline-flex",
+    minWidth: "4rem",
+    justifyContent: "center"
+  },
+  dropdown: {
+    container: {
+      zIndex: 1,
+      position: "absolute",
+      top: "calc(100% - 1px)",
+      right: "0",
+      background: "white",
+      color: "#333",
+      textAlign: "center",
+    }
   },
   project: {
     container: {
@@ -100,36 +120,28 @@ module.exports = {
     commit: {
       container: {
         display: "flex",
-        // background: "white",
-        padding: ".25rem 1rem .5rem .5rem",
-        // borderRadius: ".25rem",
-        // border: "1px solid rgba(0, 0, 0, 0.2)",
+        marginTop: ".25rem",
+        marginBottom: ".5rem",
       },
       sha: {
         marginRight: "1rem",
       },
-      status: {
-        textTransform: "uppercase",
-        borderRadius: ".25rem",
-        padding: "0 .5rem",
-        background: "skyblue",
-        color: "white",
-        float: "right",
-      },
       details: {
         flex: 1,
+        display: "flex"
       },
       name: {
         marginRight: "1rem",
       },
       date: {
+        display: "inline-block",
         marginRight: "1rem",
+        minWidth: "9rem",
       },
       message: {
-        display: "block",
+        display: "inline-block",
         fontStyle: "italic",
-        marginRight: "1rem",
-        paddingLeft: "1rem",
+        flex: 1
       }
     }
   },

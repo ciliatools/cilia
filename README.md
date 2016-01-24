@@ -40,3 +40,41 @@ Of course, you can configure the project to run such steps
 automatically.
 
 More detailed instructions are coming.
+
+## Processes
+
+This is not entirely accurate but it's pretty much what happens.
+These are implemented as shell scripts for relative easy control of
+files, processes, pipes, errors, and so on.
+
+### Repository Watcher
+
+1. For all repositories:
+    1. If there is a clone directory:
+        1. Run `git pull` in the clone directory.
+        2. For the most recent commits:
+            1. If the commit is unknown:
+                1. Create the commit directory.
+                2. Create the commit work tree.
+                3. Initialize the task work tree.
+    2. Otherwise:
+        1. Clone the repository from the origin.
+2. Wait a few seconds.
+3. Repeat.
+
+### Commit Task Watcher
+
+1. For all commits:
+    1. If the commit has a task request:
+        1. Perform the task request.
+2. Wait a few seconds.
+3. Repeat.
+
+### Commit Task Reaper
+
+1. For all commits:
+    1. For all tasks:
+        1. If the task seems dead:
+            1. Reset its status.
+2. Wait a few seconds.
+3. Repeat.

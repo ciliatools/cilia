@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# This file is part of Cilia.
+# 
+# Copyright (C) 2016  Mikael Brockman
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -eux
+shopt -s nullglob
+
+CILIA_DEPTH=${CILIA_DEPTH-1}
+GIT=${GIT-git}
+
+while true; do
+  if [ ! -d "$CILIA_ROOT"/projects ]; then
+    >&2 echo "$CILIA_ROOT"/projects: no such directory
+  else
+    for project in "$CILIA_ROOT"/projects/*; do
+      ( cd "$project"
+        if [ ! -d clone ]; then
+          if [ -s origin ]; then
+            "$GIT" clone `cat origin` clone
+          else
+            >&2 echo "$project" "has no origin; cannot clone."
+          fi
+        else
+          mkdir -p commits
+          if ( cd clone && "$GIT" pull ); then
+            if [ -d "$project"/branches ]; then
+              for branch in "$project"/branches/*; do
+                branch=$(basename "$branch")
+                commits=$(
+                  cd clone
+                  "$GIT" log --pretty=format:%H origin/$branch |
+                  head -n $CILIA_DEPTH
+                )
+                for commit in $commits; do
+                  if [ ! -d "commits/$commit" ]; then
+                    mkdir commits/$commit
+                    if ( cd clone
+                         "$GIT" worktree add -B $commit-cilia \
+                           "../commits/$commit/work" origin/$branch
+                         cd ../commits/$commit/work
+                         "$GIT" reset --hard $commit )
+                    then
+                      ( cd commits/$commit
+                        if [ -d work/.cilia ]; then
+                          ln -s "$(pwd)"/work/.cilia config
+                          mkdir -p tasks/build
+                          mkdir -p tasks/test
+                          mkdir -p tasks/up
+                          if [ -d config/tasks ]; then
+                            for task in config/tasks/*; do
+                              taskname=$(basename "$task")
+                              mkdir -p tasks/"$taskname"
+                            done
+                          else
+                            >&2 echo "$project": "$commit" lacks .cilia/tasks
+                          fi
+                        else
+                          >&2 echo "$project": lacks .cilia
+                        fi
+                      )
+                    else
+                      >&2 echo "$project": failed to checkout $branch
+                    fi
+                  fi
+                done
+              done
+            else
+              >&2 echo "$project" "lacks a branches directory"
+            fi
+          else
+            >&2 echo "$project" "pull failed."
+          fi
+        fi
+      )
+    done
+  fi
+  sleep 5
+done

@@ -25,18 +25,47 @@ const ROOT = "/cilia"
 
 let app = connect()
 
+let commitRoutePattern =
+  new RegExp("^/api/projects/([^/]+)/commits/([^/]+)$")
+
+let taskRequestPattern =
+  new RegExp("^/api/projects/([^/]+)/commits/([^/]+)/tasks/([^/]+)/request$")
+
+app.use(require("body-parser").text())
+
 app.use((req, res) => {
+  console.log(req.method, req.url)
   if (req.url == "/api/") {
     res.end("cilia api")
   } else if (req.url == "/api/projects") {
     inspectProjects()
       .then(sendJSON(res))
       .catch(e => {
+        console.error(e)
         res.statusCode = 500
-        res.end()
+        res.end(e.toString())
       })
+  } else if (req.url.match(commitRoutePattern)) {
+    inspectCommitDetails(RegExp.$1, RegExp.$2)
+      .then(sendJSON(res))
+      .catch(e => {
+        console.error(e)
+        res.statusCode = 500
+        res.end(e.toString())
+      })
+  } else if (req.method == "POST" && req.url.match(taskRequestPattern)) {
+    try {
+      console.log("writing", req.body, "to", req.url.replace(/^\/api/, ROOT))
+      fs.writeFileSync(req.url.replace(/^\/api/, ROOT), req.body)
+      console.log("ok")
+      res.end()
+    } catch (e) {
+      res.statusCode = 500
+      res.end(e.toString())
+    }
   } else {
     res.statusCode = 404
+    res.end()
   }
 })
 
@@ -95,10 +124,22 @@ let inspectCommits = ({
       },
       date: commit.date(),
       message: commit.message(),
-      run: inspectRun({ projectRoot, hash })
+      tasks: inspectTasks({ projectRoot, hash })
     }
   })
 }))
+
+let inspectCommitDetails =
+  (projectName, hash) => new Promise((resolve, reject) => {
+    let projectRoot = `${ROOT}/projects/${projectName}`
+    if (fs.statSync(`${projectRoot}/commits/${hash}/tasks`).isDirectory()) {
+      let taskRoot = `${projectRoot}/commits/${hash}/tasks`
+      let tasks = fs.readdirSync(taskRoot)
+      resolve(mapKeyArray(tasks, x => inspectTaskDetails(`${taskRoot}/${x}`)))
+    } else {
+      resolve({})
+    }
+  })
 
 let readFile = path => {
   try {
@@ -108,18 +149,39 @@ let readFile = path => {
   }
 }
 
-let inspectRun = ({ projectRoot, hash }) => {
-  if (fs.statSync(`${projectRoot}/runs/${hash}`).isDirectory()) {
-    let run = `${projectRoot}/runs/${hash}`
-    return {
-      pid: readFile(`${run}/pid`),
-      status: readFile(`${run}/status`),
-      started: readFile(`${run}/started`),
-      finished: readFile(`${run}/finished`),
-    }
+let mapValues = (object, f) => {
+  let result = {}
+  Object.keys(object).forEach(x => result[x] = f(object[x]))
+  return result
+}
+
+let mapKeyArray = (keys, f) => {
+  let result = {}
+  keys.forEach(x => result[x] = f(x))
+  return result
+}
+
+let inspectTasks = ({ projectRoot, hash }) => {
+  if (fs.statSync(`${projectRoot}/commits/${hash}/tasks`).isDirectory()) {
+    let taskRoot = `${projectRoot}/commits/${hash}/tasks`
+    let tasks = fs.readdirSync(taskRoot)
+    return mapKeyArray(tasks, x => inspectTask(`${taskRoot}/${x}`))
   } else {
     return null
   }
 }
+
+let inspectTask = taskDirectory => ({
+  status: readFile(`${taskDirectory}/status`),
+  started: readFile(`${taskDirectory}/started`),
+  finished: readFile(`${taskDirectory}/finished`),
+  request: readFile(`${taskDirectory}/request`),
+  pid: readFile(`${taskDirectory}/pid`),
+})
+
+let inspectTaskDetails = taskDirectory => ({
+  ...inspectTask(taskDirectory),
+  log: readFile(`${taskDirectory}/log`)
+})
 
 require("http").createServer(app).listen(80)

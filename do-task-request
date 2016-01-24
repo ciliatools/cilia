@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# This file is part of Cilia.
+# 
+# Copyright (C) 2016  Mikael Brockman
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -eux
+shopt -s nullglob
+set -m
+
+project="$1"
+commit="$2"
+taskname="$3"
+request="$4"
+
+cd "$CILIA_ROOT"/projects/"$project"/commits/"$commit"
+echo TASK REQUEST: $project $commit $taskname $request
+
+if [ -s tasks/"$taskname"/status ]; then
+  status=$(cat tasks/"$taskname"/status)
+else
+  status=waiting
+fi
+
+shorthash=$(echo $commit | head -c 8)
+export COMPOSE_PROJECT_NAME=cilia$shorthash
+export COMMIT=$commit
+
+function wait-for-process {
+  while [ -e /proc/$1 ]; do sleep 0.5; done
+}
+
+function stop-process {
+  if kill $pid; then
+    echo cancelling > tasks/"$taskname"/status
+    wait-for-process $pid || true
+    echo cancelled > tasks/"$taskname"/status
+    rm tasks/"$taskname"/pid
+  else
+    true
+  fi
+}
+
+function clear-request {
+  rm tasks/"$taskname"/request
+}
+
+function mark-as-started {
+  echo started > tasks/"$taskname"/status
+  date +%s > tasks/"$taskname"/started
+}
+
+function save-pid {
+  pid=$!
+  echo $pid > tasks/"$taskname"/pid
+}
+
+function read-pid {
+  pid=$(cat tasks/"$taskname"/pid)
+}
+
+function await-process-death {
+  trap stop-process EXIT
+  if wait
+    then echo succeeded > tasks/"$taskname"/status
+    else echo failed > tasks/"$taskname"/status
+  fi
+}
+
+function clear-pid {
+  rm tasks/"$taskname"/pid
+}
+
+function mark-as-finished {
+  date +%s > tasks/"$taskname"/finished
+}
+
+function run-compose {
+  command="$1"
+  service=$(cat config/tasks/"$taskname"/service || echo "")
+  stdbuf -o 0 "$CILIA_PATH"/interleave-fds \
+    tasks/"$taskname"/log \
+    docker-compose -f work/.cilia/docker-compose.yml \
+      "$command" $service \
+    &
+}
+
+function do-start {
+  echo $project $commit: Starting $taskname
+  case $taskname in
+    build | up)
+      clear-request
+      mark-as-started
+      run-compose "$taskname"
+      save-pid
+      await-process-death
+      clear-pid
+      mark-as-finished
+      ;;
+
+    *)
+      clear-request
+      &>2 echo only know how to build and up right now
+      ;;
+  esac
+}
+
+function do-stop {
+  echo $project $commit: Stopping $taskname
+  clear-request
+  read-pid
+  stop-process
+  clear-pid
+  mark-as-finished
+}
+
+case "$request" in
+  start)
+    case "$status" in
+      started | stopping)
+        clear-request ; exit ;;
+      *) do-start;;
+    esac
+    ;;
+
+  stop)
+    case "$status" in
+      waiting | succeeded | failed)
+        clear-request ; exit ;;
+      *) do-stop;;
+    esac
+    ;;
+    
+  *) echo "unknown request" $request;;
+esac
+

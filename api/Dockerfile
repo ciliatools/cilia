@@ -3,6 +3,7 @@ RUN mkdir /app
 WORKDIR /app
 RUN npm install connect body-parser \
   babel-core babel-register babel-preset-es2015 \
+  babel-plugin-transform-object-rest-spread \
   nodegit
 COPY .babelrc /app
 COPY index.js /app
