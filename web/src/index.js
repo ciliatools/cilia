@@ -197,15 +197,10 @@ class TaskPill extends React.Component {
   getStatus() { return this.getTask().status || "waiting" }
   getTask() { return this.props.commit.tasks[this.props.taskName] }
 
-  borderColor() {
-    return "rgba(255, 255, 255, 0.3)"
-  }
-
   render() {
     let style = {
       ...styles.pill,
       ...{ backgroundColor: this.color(), color: "white" },
-      ...{ borderColor: this.borderColor() },
     }
     
     return (
@@ -248,7 +243,6 @@ class TaskPill extends React.Component {
         <div style={{
           textTransform: "uppercase",
           backgroundColor: this.color(),
-          borderColor: this.borderColor(),
           color: "white",
           padding: "0 .5rem",
           minWidth: "6rem"
