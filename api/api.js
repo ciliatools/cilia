@@ -20,6 +20,7 @@
 let connect = require("connect")
 let fs = require("fs")
 let git = require("nodegit")
+let fetch = require("node-fetch")
 
 const ROOT = "/cilia"
 
@@ -30,6 +31,9 @@ let commitRoutePattern =
 
 let taskRequestPattern =
   new RegExp("^/api/projects/([^/]+)/commits/([^/]+)/tasks/([^/]+)/request$")
+
+let browserstackSessionPattern =
+  new RegExp("^/api/browserstack/sessions/([^/]+)$")
 
 app.use(require("body-parser").text())
 
@@ -63,6 +67,27 @@ app.use((req, res) => {
       res.statusCode = 500
       res.end(e.toString())
     }
+  } else if (req.url.match(browserstackSessionPattern)) {
+    let id = RegExp.$1
+    let user = process.env["BROWSERSTACK_USER"]
+    let key = process.env["BROWSERSTACK_KEY"]
+    console.log(`https://${user}:${key}@www.browserstack.com/automate/sessions/${id}.json`)
+    try {
+      fetch(
+        `https://${user}:${key}@www.browserstack.com/automate/sessions/${id}.json`
+      ).then(x => x.json())
+       .then(sendJSON(res))
+       .catch(e => {
+         console.error(e)
+         res.statusCode = 500
+         res.end(e.toString())
+       })
+     } catch (e) {
+       console.error(e)
+       res.statusCode = 500
+       res.end(e.toString())
+     }
+      
   } else {
     res.statusCode = 404
     res.end()

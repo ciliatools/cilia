@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -eux
+project=$1 commit=$2 task=$3 status=$4
+cd "$CILIA_ROOT/projects/$project/commits/$commit"
+if [ -s config/tasks/"$task"/on-"$status" ]; then
+  next=$(cat config/tasks/"$task"/on-"$status")
+  echo start > tasks/"$next"/request
+fi

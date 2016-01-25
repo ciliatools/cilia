@@ -37,6 +37,7 @@ fi
 shorthash=$(echo $commit | head -c 8)
 export COMPOSE_PROJECT_NAME=cilia$shorthash
 export COMMIT=$commit
+export DOMAIN=$(hostname)
 
 function wait-for-process {
   while [ -e /proc/$1 ]; do sleep 0.5; done
@@ -71,12 +72,19 @@ function read-pid {
   pid=$(cat tasks/"$taskname"/pid)
 }
 
+function run-task-hook {
+  "$CILIA_PATH"/run-task-hook \
+    "$project" "$commit" "$taskname" "$1"
+}
+
 function await-process-death {
   trap stop-process EXIT
   if wait
-    then echo succeeded > tasks/"$taskname"/status
-    else echo failed > tasks/"$taskname"/status
+    then status=succeeded
+    else status=failed
   fi
+  echo $status > tasks/"$taskname"/status
+  run-task-hook $status
 }
 
 function clear-pid {
@@ -97,6 +105,15 @@ function run-compose {
     &
 }
 
+function wait-using-curl {
+  ( set +m # kill curl when we die
+    i = 0
+    until [[ $i == 20 ]] || curl -I $commit.$(hostname)
+    do i=$((i + 1)); sleep 1
+    done
+  ) >> tasks/"$taskname"/log &
+}
+
 function do-start {
   echo $project $commit: Starting $taskname
   case $taskname in
@@ -104,12 +121,35 @@ function do-start {
       clear-request
       mark-as-started
       run-compose "$taskname"
+      run-task-hook started
       save-pid
       await-process-death
       clear-pid
       mark-as-finished
       ;;
 
+    test)
+      clear-request
+      mark-as-started
+      run-compose run
+      run-task-hook started
+      save-pid
+      await-process-death
+      clear-pid
+      mark-as-finished
+      ;;
+    
+    wait)
+      clear-request
+      mark-as-started
+      wait-using-curl
+      run-task-hook started
+      save-pid
+      await-process-death
+      clear-pid
+      mark-as-finished
+      ;;
+    
     *)
       clear-request
       &>2 echo only know how to build and up right now

@@ -32,6 +32,7 @@ let state = {
   projects: { },
   taskDetails: { },
   pings: { },
+  browserstackSessions: { },
 }
 
 window.state = state
@@ -433,10 +434,36 @@ let requestTaskDetails = ({ project, hash }) =>
     })
   )
 
+let requestBrowserstackSession = id =>
+  api.get(`/api/browserstack/sessions/${id}`).then(
+    session => change({
+      ...state,
+      browserstackSessions: {
+        ...state.browserstackSessions,
+        [id]: session
+      }
+    })
+  )
+
+let requestBrowserstackSessions = ({ project, hash }) => {
+  project = getProject(project)
+  if (!project) return
+  let commit = getCommit(project, hash)
+  Object.keys(commit.tasks).forEach(taskName => {
+    if (state.taskDetails[commit.sha]) {
+      let log = state.taskDetails[commit.sha][taskName].log
+      if (log.match(/browserstack session: (\w+)/i)) {
+        requestBrowserstackSession(RegExp.$1)
+      }
+    }
+  })
+}
+
 setInterval(() => {
   initialize()
   if (state.route.commit) {
     requestTaskDetails(state.route.commit)
+    requestBrowserstackSessions(state.route.commit)
   }
 }, 2000)
 
@@ -482,7 +509,8 @@ class CommitRoute extends React.Component {
       <TaskDetails {...{
         key: taskName,
         project, commit, taskName,
-        details: taskDetails[taskName]
+        details: taskDetails[taskName],
+        browserstackSessions: this.props.browserstackSessions,
       }} />
     )
   }
@@ -520,8 +548,42 @@ class TaskDetails extends React.Component {
         <TaskPill taskName={taskName} horizontal={true}
                   project={project} commit={commit} />
         { details.log && <TaskLog log={details.log} /> }
+        { details.log &&
+          <Browserstack log={details.log}
+            browserstackSessions={this.props.browserstackSessions} />
+        }
       </div>
     )
+  }
+}
+
+class Browserstack extends React.Component {
+  parse() {
+    if (this.props.log.match(/browserstack session: (\w+)/i)) {
+      return RegExp.$1
+    } else {
+      return null
+    }
+  }
+
+  getSession() {
+    let result = this.parse()
+    if (result)
+      return this.props.browserstackSessions[result]
+  }
+
+  render() {
+    let session = this.getSession()
+    if (session && session.automation_session.video_url) {
+      return (
+        <div style={{ margin: "1rem 0" }}>
+          <video controls width="100%"
+            src={session.automation_session.video_url}/>
+        </div>
+      )
+    } else {
+      return null
+    }
   }
 }
 

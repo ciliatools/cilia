@@ -15,6 +15,9 @@ services:
       - "${CILIA_ROOT}:/cilia"
     networks:
       - cilia
+    environment:
+      - "BROWSERSTACK_USER=${BROWSERSTACK_USER}"
+      - "BROWSERSTACK_KEY=${BROWSERSTACK_KEY}"
   webpack:
     build: .
     volumes:
