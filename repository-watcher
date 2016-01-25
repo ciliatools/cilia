@@ -57,6 +57,7 @@ while true; do
                       ( cd commits/$commit
                         if [ -d work/.cilia ]; then
                           ln -s "$(pwd)"/work/.cilia config
+                          mkdir artifacts
                           mkdir -p tasks/build
                           mkdir -p tasks/test
                           mkdir -p tasks/up

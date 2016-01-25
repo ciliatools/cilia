@@ -3,6 +3,10 @@ set -eux
 project=$1 commit=$2 task=$3 status=$4
 cd "$CILIA_ROOT/projects/$project/commits/$commit"
 if [ -s config/tasks/"$task"/on-"$status" ]; then
-  next=$(cat config/tasks/"$task"/on-"$status")
-  echo start > tasks/"$next"/request
+  cat config/tasks/"$task"/on-"$status" | {
+    while read next; do
+      echo "start CILIA_TASK=$task CILIA_STATUS=$status" > \
+        tasks/"$next"/request
+    done
+  }
 fi

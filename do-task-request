@@ -23,9 +23,24 @@ set -m
 project="$1"
 commit="$2"
 taskname="$3"
-request="$4"
 
-cd "$CILIA_ROOT"/projects/"$project"/commits/"$commit"
+read request suffix <<<"$4"
+while read assignment; do
+  if [ -n "$assignment" ]; then
+    eval "export $assignment"
+  fi
+done <<<"$suffix"
+
+commitdir="$CILIA_ROOT"/projects/"$project"/commits/"$commit"
+
+function export-variables {
+  export CILIA_PROJECT="$project"
+  export CILIA_COMMIT="$commit"
+  export CILIA_DOMAIN=$(hostname)
+  export CILIA_ARTIFACTS="$commitdir"/artifacts
+}
+
+cd "$commitdir"
 echo TASK REQUEST: $project $commit $taskname $request
 
 if [ -s tasks/"$taskname"/status ]; then
@@ -116,11 +131,24 @@ function wait-using-curl {
 
 function do-start {
   echo $project $commit: Starting $taskname
+
+  export-variables
   case $taskname in
     build | up)
       clear-request
       mark-as-started
       run-compose "$taskname"
+      run-task-hook started
+      save-pid
+      await-process-death
+      clear-pid
+      mark-as-finished
+      ;;
+
+    say)
+      clear-request
+      mark-as-started
+      run-compose run
       run-task-hook started
       save-pid
       await-process-death
