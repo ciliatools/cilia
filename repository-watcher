@@ -65,6 +65,9 @@ while true; do
                               taskname=$(basename "$task")
                               mkdir -p tasks/"$taskname"
                             done
+                            if [ -s config/on-commit ]; then
+                              echo start > tasks/$(cat config/on-commit)/request
+                            fi
                           else
                             >&2 echo "$project": "$commit" lacks .cilia/tasks
                           fi
