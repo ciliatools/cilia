@@ -30,6 +30,8 @@ understands branch references, so that
 `some-branch.staging.example.com` goes to the most recent commit
 instance for `some-branch`.
 
+**XXX**: Currently only full 40-character hashes work.
+
 At this point you can see the commit instance described in the web
 interface, and click a link to visit the application built from the
 relevant commit.  You can also manually trigger integration test runs,
@@ -57,6 +59,7 @@ files, processes, pipes, errors, and so on.
                 1. Create the commit directory.
                 2. Create the commit work tree.
                 3. Initialize the task work tree.
+                4. Start task according to commit hook
     2. Otherwise:
         1. Clone the repository from the origin.
 2. Wait a few seconds.
@@ -67,6 +70,11 @@ files, processes, pipes, errors, and so on.
 1. For all commits:
     1. If the commit has a task request:
         1. Perform the task request.
+        2. Run the relevant hook, if present.
+        3. Save the task process ID.
+        4. Await the task process.
+        5. Clear the task process ID.
+        6. Mark the task as finished/cancelled.
 2. Wait a few seconds.
 3. Repeat.
 
