@@ -135,7 +135,7 @@ module.exports = {
       date: {
         display: "inline-block",
         marginRight: "1rem",
-        minWidth: "9rem",
+        flex: 1,
       },
       message: {
         display: "inline-block",

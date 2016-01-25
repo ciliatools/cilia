@@ -328,15 +328,18 @@ class CommitDetails extends React.Component {
         {moment(commit.date).calendar(time)}
       </span>
     return (
-      <span style={styles.project.commit.details}>
-        { sha }
-        <span style={styles.project.commit.name}>
-          {commit.author.email.replace(/@.*/, "")}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1 }}>
+        <span style={styles.project.commit.details}>
+          { sha }
+          <span style={styles.project.commit.name}>
+            {commit.author.email.replace(/@.*/, "")}
+          </span>
+          { !simple && date }
+          { simple && message }
+          { !simple && <CommitStatusIndicator { ...{ commit, project } } /> }
         </span>
-        { !simple && date }
-        { message }
-        { !simple && <CommitStatusIndicator { ...{ commit, project } } /> }
-      </span>
+        { !simple && <div>{message}</div> }
+      </div>
     )
   }
 }
@@ -461,7 +464,6 @@ class CommitRoute extends React.Component {
       <div style={styles.root}>
         <NavBar>
           <CommitDetails {... { project, commit, simple: true } } />
-          <CommitStatusIndicator {... { project, commit } } />
         </NavBar>
         <div style={styles.main}>
           <div style={{ marginTop: ".5rem" }}>
