@@ -79,7 +79,7 @@ function run-task-hook {
 
 function await-process-death {
   trap stop-process EXIT
-  if wait
+  if wait $pid
     then status=succeeded
     else status=failed
   fi
