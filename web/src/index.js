@@ -286,10 +286,15 @@ class PillOption extends React.Component {
   }
 }
 
+let preferredOrder = ["build", "up", "wait", "test", "push", "deploy"]
+let sortTaskKeys = keys => [].concat(keys).sort(
+  (a, b) => (preferredOrder.indexOf(b) || 999) - (preferredOrder.indexOf(a) || 999)
+)
+
 class CommitStatusIndicator extends React.Component {
   render() {
     let { commit, project } = this.props
-    let tasks = Object.keys(commit.tasks).map(x =>
+    let tasks = sortTaskKeys(Object.keys(commit.tasks)).map(x =>
       <TaskPill key={x} taskName={x}
         commit={commit} project={project} />
     )
@@ -505,7 +510,7 @@ class CommitRoute extends React.Component {
   }
 
   renderTasks({ project, commit, taskDetails }) {
-    return Object.keys(commit.tasks).map(taskName =>
+    return sortTaskKeys(Object.keys(commit.tasks)).map(taskName =>
       <TaskDetails {...{
         key: taskName,
         project, commit, taskName,
@@ -528,8 +533,8 @@ class TaskLog extends React.Component {
              padding: ".5rem 1rem",
              maxHeight: "24ex",
              overflow: "scroll",
-             background: "#555",
-             color: "ivory",
+             background: "white",
+             border: "1px solid #ccc",
            }}
         ref="node"
         dangerouslySetInnerHTML={{

@@ -35,7 +35,6 @@ module.exports = {
     overflow: "hidden",
     display: "flex",
     flexDirection: "column",
-    maxWidth: "50rem",
     margin: "0 auto",
   },
   wideRoot: {
@@ -53,9 +52,7 @@ module.exports = {
         padding: "0.3rem 0.4rem",
         background: "white",
         zIndex: 1,
-        border: "1px solid #bbb",
-        borderTop: "none",
-        borderRadius: "0 0 .25rem .25rem",
+        borderBottom: "1px solid #bbb",
       },
       wide: {
         display: "flex",
@@ -82,7 +79,7 @@ module.exports = {
   main: {
     overflow: "scroll",
     height: "100%",
-    marginLeft: "0.5rem",
+    padding: "0 5rem 5rem",
   },
   iframe: {
     height: "100%",
