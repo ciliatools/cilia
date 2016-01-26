@@ -30,16 +30,21 @@ while true; do
       ( cd "$project"
         if [ ! -d clone ]; then
           if [ -s origin ]; then
+            echo === "$project": cloning
             "$GIT" clone `cat origin` clone
           else
             >&2 echo "$project" "has no origin; cannot clone."
           fi
         else
           mkdir -p commits
-          if ( cd clone && "$GIT" pull ); then
+          if ( cd clone && "$GIT" pull --quiet  ); then
             if [ -d "$project"/branches ]; then
               for branch in "$project"/branches/*; do
                 branch=$(basename "$branch")
+                ( cd clone
+                  if [ ! -e .git/refs/heads/$branch ]; then
+                    "$GIT" checkout $branch
+                  fi )
                 commits=$(
                   cd clone
                   "$GIT" log --pretty=format:%H origin/$branch |
@@ -47,6 +52,7 @@ while true; do
                 )
                 for commit in $commits; do
                   if [ ! -d "commits/$commit" ]; then
+                    echo === $project: new commit $commit
                     mkdir commits/$commit
                     if ( cd clone
                          "$GIT" worktree add -B $commit-cilia \
@@ -67,6 +73,7 @@ while true; do
                               mkdir -p tasks/"$taskname"
                             done
                             if [ -s config/on-commit ]; then
+                              echo === $project: starting $(cat config/on-commit)
                               echo start > tasks/$(cat config/on-commit)/request
                             fi
                           else

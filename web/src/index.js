@@ -186,11 +186,11 @@ class TaskPill extends React.Component {
 
   color() {
     return {
-      started: "cornflowerblue",
+      started: "rgba(100, 150, 230, 0.7)",
       cancelling: "cyan",
       cancelled: "darkcyan",        
-      succeeded: "#25d25a",
-      failed: "salmon",
+      succeeded: "rgba(25, 150, 0, 0.4)",
+      failed: "rgba(225, 60, 90, 0.8)",
       waiting: "lightgrey",
     }[this.getStatus()]
   }
@@ -581,8 +581,11 @@ class Browserstack extends React.Component {
     let session = this.getSession()
     if (session && session.automation_session.video_url) {
       return (
-        <div style={{ margin: "1rem 0" }}>
-          <video controls width="100%"
+        <div style={{
+            margin: "1rem 0", display: "flex", justifyContent: "center",
+        }}>
+          <video controls width="75%"
+            style={{ boxShadow: "0 0 30px grey" }}
             src={session.automation_session.video_url}/>
         </div>
       )

@@ -36,7 +36,7 @@ while true; do
                   taskname=$(basename "$task")
                   if [ -s "$task"/request ]; then
                     request=$(cat "$task"/request)
-                    >&2 echo "$project" "$commit" "$taskname" "$request"
+                    echo === "$project": "$commit" "$taskname" "$request"
                     "$CILIA_PATH"/do-task-request \
                       "$project" "$commit" "$taskname" "$request" \
                       &

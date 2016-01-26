@@ -16,7 +16,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-set -eux
+set -eu
 shopt -s nullglob
 set -m
 
@@ -30,6 +30,10 @@ while read assignment; do
     eval "export $assignment"
   fi
 done <<<"$suffix"
+
+
+echo; echo; echo; echo; echo; echo; echo
+echo === $project $commit $taskname $request $suffix
 
 projectdir="$CILIA_ROOT"/projects/"$project"
 commitdir="$projectdir"/commits/"$commit"
@@ -45,7 +49,6 @@ function export-variables {
 }
 
 cd "$commitdir"
-echo TASK REQUEST: $project $commit $taskname $request
 
 if [ -s tasks/"$taskname"/status ]; then
   status=$(cat tasks/"$taskname"/status)
@@ -54,36 +57,49 @@ else
 fi
 
 shorthash=$(echo $commit | head -c 8)
+
+function log {
+  echo ==== $project $shorthash $taskname $@
+}
+
+log status: $status
+
 export COMPOSE_PROJECT_NAME=cilia$shorthash
 export COMMIT=$commit
 export DOMAIN=$(hostname)
 
 function wait-for-process {
+  log waiting for pid $1
   while [ -e /proc/$1 ]; do sleep 0.5; done
 }
 
 function stop-process {
+  log "giving pid $pid an offer it can't refuse"
   if kill $pid; then
     echo cancelling > tasks/"$taskname"/status
     wait-for-process $pid || true
     echo cancelled > tasks/"$taskname"/status
     rm tasks/"$taskname"/pid
   else
+    log pid $pid was already gone
     true
   fi
 }
 
 function clear-request {
+  log clearing the request file
   rm tasks/"$taskname"/request
 }
 
 function mark-as-started {
+  log marking as started on $(date -Iseconds)
   echo started > tasks/"$taskname"/status
   date +%s > tasks/"$taskname"/started
 }
 
 function save-pid {
   pid=$!
+  log "saving pid ($pid)"
   echo $pid > tasks/"$taskname"/pid
 }
 
@@ -92,11 +108,13 @@ function read-pid {
 }
 
 function run-task-hook {
+  log running task hooks for $1
   "$CILIA_PATH"/run-task-hook \
     "$project" "$commit" "$taskname" "$1"
 }
 
 function await-process-death {
+  log waiting for pid $pid
   trap stop-process EXIT
   if wait $pid
     then status=succeeded
@@ -107,16 +125,19 @@ function await-process-death {
 }
 
 function clear-pid {
+  log clearing pid file
   rm tasks/"$taskname"/pid
 }
 
 function mark-as-finished {
+  log marking as finished on $(date -Iseconds)
   date +%s > tasks/"$taskname"/finished
 }
 
 function run-compose {
   command="$1"
   service=$(cat config/tasks/"$taskname"/service || echo "")
+  log running docker-compose $command $service
   stdbuf -o 0 "$CILIA_PATH"/interleave-fds \
     tasks/"$taskname"/log \
     docker-compose -f work/.cilia/docker-compose.yml \
@@ -127,11 +148,16 @@ function run-compose {
 function wait-using-curl {
   ( set +m # kill curl when we die
     i=0
-    until [[ $i == 20 ]] || curl -I $commit.$(hostname)
-    do i=$((i + 1)); sleep 1
+    until [[ $i == 20 ]]; do
+      i=$((i + 1))
+      if curl -I $commit.$(hostname); then
+        exit 0
+      fi
+      sleep 1
     done
+    exit 1
   ) >> tasks/"$taskname"/log &
-  echo curl wait pid $!
+  log waiting for commit proxy
 }
 
 function count-started-tasks {
@@ -156,13 +182,13 @@ function check-concurrency-limit {
   count=$(count-started-tasks)
   if [ $count -ge $limit ]; then (
     set -ex
-    echo "$project $commit: concurrency limit exceeded for $taskname ($count > $limit)"
+    log concurrency limit exceeded "($count >= $limit)"
     cd "$projectdir"/commits
     if [ "$options" == stop-oldest ]; then
       excess=$(( limit - count + 1 ))
-      echo "$project $commit: stopping oldest $excess of tasks $taskname"
+      log stopping oldest $excess
 
-      # Behold this long pipeline.
+      # Behold this pipeline.
       grep --include status      \
            --exclude-dir work     \
            --exclude-dir clone     \
@@ -183,6 +209,7 @@ function check-concurrency-limit {
           # If there is a request, it's probably ours, so just ignore it.
           # This way it should be safe to run this pipeline several times.
           if [ ! -s $hashtostop/tasks/"$taskname"/request ]; then
+            log stopping $(echo $hashtostop | head -c 8) due to concurrency limit
             echo stop > $hashtostop/tasks/"$taskname"/request
           fi
         done
@@ -195,7 +222,7 @@ function check-concurrency-limit {
 
 function do-start {
   check-concurrency-limit
-  echo $project $commit: starting $taskname
+  log starting
 
   export-variables
   case $taskname in
@@ -245,12 +272,12 @@ function do-start {
     
     *)
       clear-request
-      &>2 echo only know how to build and up right now
+      log unknown task type
   esac
 }
 
 function do-stop {
-  echo $project $commit: Stopping $taskname
+  log stopping
   clear-request
   read-pid
   stop-process
@@ -275,7 +302,7 @@ case "$request" in
     esac
     ;;
     
-  *) echo "unknown request" $request
+  *) log unknown request
 esac
 
-echo task request done
+log task request completed
