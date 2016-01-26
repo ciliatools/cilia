@@ -31,13 +31,17 @@ while read assignment; do
   fi
 done <<<"$suffix"
 
-commitdir="$CILIA_ROOT"/projects/"$project"/commits/"$commit"
+projectdir="$CILIA_ROOT"/projects/"$project"
+commitdir="$projectdir"/commits/"$commit"
 
 function export-variables {
   export CILIA_PROJECT="$project"
   export CILIA_COMMIT="$commit"
   export CILIA_DOMAIN=$(hostname)
   export CILIA_ARTIFACTS="$commitdir"/artifacts
+  export CILIA_PROJECT_TREE="$CILIA_ROOT"/projects/"$project"
+  export CILIA_WORKTREE="$commitdir"/work
+  export CILIA_CONFIG="$commitdir"/config
 }
 
 cd "$commitdir"
@@ -122,15 +126,76 @@ function run-compose {
 
 function wait-using-curl {
   ( set +m # kill curl when we die
-    i = 0
+    i=0
     until [[ $i == 20 ]] || curl -I $commit.$(hostname)
     do i=$((i + 1)); sleep 1
     done
   ) >> tasks/"$taskname"/log &
+  echo curl wait pid $!
+}
+
+function count-started-tasks {
+  # Wow, such alignment.
+  ( cd "$projectdir"
+    grep --recursive      \
+         --include status  \
+         --exclude-dir work \
+         --exclude-dir clone \
+         started              |
+    grep /tasks/"$taskname"/  |
+    wc -l )
+}
+
+function check-concurrency-limit {
+  if [ -s config/tasks/"$taskname"/concurrency ]; then
+    read limit options <<< $(cat config/tasks/"$taskname"/concurrency)
+  else
+    limit=5 options=""
+  fi
+  
+  count=$(count-started-tasks)
+  if [ $count -ge $limit ]; then (
+    set -ex
+    echo "$project $commit: concurrency limit exceeded for $taskname ($count > $limit)"
+    cd "$projectdir"/commits
+    if [ "$options" == stop-oldest ]; then
+      excess=$(( limit - count + 1 ))
+      echo "$project $commit: stopping oldest $excess of tasks $taskname"
+
+      # Behold this long pipeline.
+      grep --include status      \
+           --exclude-dir work     \
+           --exclude-dir clone     \
+           -r started              |
+      grep /tasks/"$taskname"/     |
+      sed -e 's/\/.*//'            | {
+        # The input now is a list of commits whose relevant task is started.
+        while read hash; do
+          # Prepend a column with the epoch timestamp of the started tasks.
+          echo $(cat $hash/tasks/"$taskname"/started) $hash
+        done
+      }                            |
+      sort --numeric-sort --key=1  |
+      awk '{ print $2 }'           |
+      head -n $excess              | {
+        # Request stopping of the oldest excess tasks.
+        while read hashtostop; do
+          # If there is a request, it's probably ours, so just ignore it.
+          # This way it should be safe to run this pipeline several times.
+          if [ ! -s $hashtostop/tasks/"$taskname"/request ]; then
+            echo stop > $hashtostop/tasks/"$taskname"/request
+          fi
+        done
+      }
+    fi
+    exit 0
+  )
+  fi
 }
 
 function do-start {
-  echo $project $commit: Starting $taskname
+  check-concurrency-limit
+  echo $project $commit: starting $taskname
 
   export-variables
   case $taskname in
@@ -181,7 +246,6 @@ function do-start {
     *)
       clear-request
       &>2 echo only know how to build and up right now
-      ;;
   esac
 }
 
@@ -199,7 +263,7 @@ case "$request" in
     case "$status" in
       started | stopping)
         clear-request ; exit ;;
-      *) do-start;;
+      *) do-start
     esac
     ;;
 
@@ -207,10 +271,11 @@ case "$request" in
     case "$status" in
       waiting | succeeded | failed)
         clear-request ; exit ;;
-      *) do-stop;;
+      *) do-stop
     esac
     ;;
     
-  *) echo "unknown request" $request;;
+  *) echo "unknown request" $request
 esac
 
+echo task request done

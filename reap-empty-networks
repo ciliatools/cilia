@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+while true; do
+  docker network ls -q | {
+    while read x; do
+      docker network inspect $x
+    done
+  } |
+  jq -r '.[0] | select(.Name | startswith("cilia"))
+              | select(.Containers | length | . == 0) | .Id' | {
+    while read network; do
+      >&2 echo removing empty network $network
+      docker network rm $network
+    done
+  }
+  sleep 5
+done
