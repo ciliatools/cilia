@@ -34,24 +34,7 @@ subcommand="$@"
 stdout=`mktemp -u` stderr=`mktemp -u`
 mkfifo "$stdout" "$stderr"
 
-# Now for a long rant about signal handling, process groups,
-# and job control.  Read only if you're curious.  This is
-# stuff I unfortunately had to figure out while investigating
-# why Ctrl-C wasn't letting the subcommand exit gracefully.
-#
 # We start cat processes that become the read ends of the FIFOs.
-# The problem is that those processes are killed immediately when
-# this shell script gets a SIGTERM; and then the subprocess gets
-# EPIPE errors when trying to write stuff to stdout or stderr.
-#
-# That's a problem, because many programs don't handle EPIPE
-# gracefully.  For example, Docker Compose in foreground mode
-# doesn't shut down containers on EPIPE.
-#
-# Therefore, we want the subcommand to exit first.
-#
-# Why is it that the cat subprocesses are killed immediately,
-# regardless of any trap commands we run?  Here's why:
 #
 # In non-interactive mode, bash does not enable job control.
 # This absence of job control has an effect on the assignment of
@@ -59,30 +42,33 @@ mkfifo "$stdout" "$stderr"
 # processes get the same process group as the shell itself.
 #
 # And so when a signal is sent to the shell, that signal is also
-# automatically (by the kernel) sent to all its children who have
-# the same process group...  Aha!  That means if the shell is killed,
-# all background processes will be killed simultaneously.
+# automatically (by the kernel) sent to all its children who have the
+# same process group...  That means if the shell is killed, all
+# background processes will be killed simultaneously.
+#
+# This will result in EPIPE errors if the command processes don't like
+# to have their output streams closed.
 #
 # Thus... we need to enable job control:
 
-set -m # enable job control
+set -m
 
 # Now we can start the pipe-reading processes in the background.
 # They in turn will die of EPIPE when the subcommand dies,
 # but that just means we don't have to bother killing them.
 
-( cat "$stderr" | sed -e 's/^\(.*\)$/<stderr>\1<\/stderr>/' |
-    while true; do
-      read line
-      echo "$line" >> "$logfile"
-    done
-) &
+function tee-to-log {
+  while true; do
+    read line
+    echo "$line" >> "$logfile"
+  done
+}
 
-( cat "$stdout" | sed -e 's/^\(.*\)$/<stdout>\1<\/stdout>/' |
-    while true; do
-      read line
-      echo "$line" >> "$logfile"
-    done
-) &
+function decorate {
+  sed -e 's/^\(.*\)$/<'$1'>\1<\/'$1'>/'
+}
+
+( cat "$stderr" | decorate stderr | tee-to-log ) &
+( cat "$stdout" | decorate stdout | tee-to-log ) &
 
 exec "$@" 2>"$stderr" >"$stdout"
