@@ -19,15 +19,31 @@
 set -eux
 shopt -s nullglob
 
-export CILIA_DEPTH=${CILIA_DEPTH-1}
+project=$1
+branch=$2
+commit=$3
 
-while true; do
-  if [ ! -d "$CILIA_ROOT"/projects ]; then
-    >&2 echo "$CILIA_ROOT"/projects: no such directory
-  else
-    for project in "$CILIA_ROOT"/projects/*; do
-      ( ./update-project "$project" )
+cd "$CILIA_ROOT"/projects/"$project"/commits/$commit
+if [ -d work/.cilia ]; then
+  ln -s "$(pwd)"/work/.cilia config
+  mkdir artifacts
+  mkdir -p tasks/build
+  mkdir -p tasks/test
+  mkdir -p tasks/up
+  if [ -d config/tasks ]; then
+    for task in config/tasks/*; do
+      taskname=$(basename "$task")
+      mkdir -p tasks/"$taskname"
     done
+    if [ -s config/on-commit ]; then
+      echo === $project: starting $(cat config/on-commit)
+      echo start > tasks/$(cat config/on-commit)/request
+    fi
+  else
+    >&2 echo "$project": "$commit" lacks .cilia/tasks
   fi
-  sleep 5
-done
+else
+  >&2 echo "$project": lacks .cilia
+fi
+
+

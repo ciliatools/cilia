@@ -1,0 +1,88 @@
+#!/usr/bin/env bash
+# This file is part of Cilia.
+# 
+# Copyright (C) 2016  Mikael Brockman
+# 
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+# 
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+# 
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+set -eux
+shopt -s nullglob
+
+project=$1
+cd "$project"
+
+if [ -s commit-filter ]; then
+  filter=$(cat commit-filter)
+else
+  filter=
+fi
+
+function ensure-branch-is-tracked {
+  ( cd clone
+    if [ ! -e .git/refs/heads/$branch ]; then
+      git checkout $branch
+    fi )
+}
+
+function get-latest-commit-hashes {
+  ( cd clone
+    git log --pretty=format:%H origin/$branch -- .cilia $filter |
+    head -n $CILIA_DEPTH )
+}
+
+function make-worktree-for-commit {
+  ( cd clone
+    git worktree add -B $commit-cilia \
+      "../commits/$commit/work" origin/$branch
+    cd ../commits/$commit/work
+    git reset --hard $commit )
+}
+
+function update-branch {
+  ensure-branch-is-tracked
+  for commit in $(get-latest-commit-hashes); do
+    if [ ! -d "commits/$commit" ]; then
+      echo === $project: new commit $commit
+      mkdir commits/$commit
+      if make-worktree-for-commit; then
+        "$CILIA_PATH"/initialize-commit "$project" "$branch" "$commit"
+      else
+        >&2 echo "$project": failed to checkout $branch
+      fi
+    fi
+  done
+}
+
+if [ ! -d clone ]; then
+  if [ -s origin ]; then
+    echo === "$project": cloning
+    git clone `cat origin` clone
+  else
+    >&2 echo "$project" "has no origin; cannot clone."
+  fi
+else
+  mkdir -p commits
+  if ( cd clone && git pull --quiet ); then
+    if [ -d "$project"/branches ]; then
+      for branch in "$project"/branches/*; do
+        branch=$(basename "$branch")
+        update-branch
+      done
+    else
+      >&2 echo "$project" "lacks a branches directory"
+    fi
+  else
+    >&2 echo "$project" "pull failed."
+  fi
+fi
