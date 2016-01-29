@@ -37,7 +37,12 @@ while true; do
           fi
         else
           mkdir -p commits
-          if ( cd clone && "$GIT" pull --quiet  ); then
+          if [ -s commit-filter ]; then
+            filter=$(cat commit-filter)
+          else
+            filter=
+          fi
+          if ( cd clone && "$GIT" pull --quiet ); then
             if [ -d "$project"/branches ]; then
               for branch in "$project"/branches/*; do
                 branch=$(basename "$branch")
@@ -47,7 +52,7 @@ while true; do
                   fi )
                 commits=$(
                   cd clone
-                  "$GIT" log --pretty=format:%H origin/$branch |
+                  "$GIT" log --pretty=format:%H origin/$branch -- .cilia $filter |
                   head -n $CILIA_DEPTH
                 )
                 for commit in $commits; do
