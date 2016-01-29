@@ -141,7 +141,7 @@ function run-compose {
   stdbuf -o 0 "$CILIA_PATH"/interleave-fds \
     tasks/"$taskname"/log \
     docker-compose -f work/.cilia/docker-compose.yml \
-      "$command" $service \
+      $command $service \
     &
 }
 
@@ -240,7 +240,7 @@ function do-start {
     say)
       clear-request
       mark-as-started
-      run-compose run
+      run-compose "run --rm"
       run-task-hook started
       save-pid
       await-process-death
@@ -251,7 +251,7 @@ function do-start {
     test)
       clear-request
       mark-as-started
-      run-compose run
+      run-compose "run --rm"
       run-task-hook started
       save-pid
       await-process-death
