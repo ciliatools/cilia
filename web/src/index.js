@@ -526,6 +526,12 @@ class TaskLog extends React.Component {
     this.refs.node.scrollTop = this.refs.node.scrollHeight
   }
 
+  componentDidUpdate(prevProps) {
+    if (this.props.log.length > prevProps.log.length) {
+      this.refs.node.scrollTop = this.refs.node.scrollHeight
+    }
+  }
+
   render() {
     return (
       <div style={{
