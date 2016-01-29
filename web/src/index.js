@@ -457,7 +457,7 @@ let requestBrowserstackSessions = ({ project, hash }) => {
   Object.keys(commit.tasks).forEach(taskName => {
     if (state.taskDetails[commit.sha]) {
       let log = state.taskDetails[commit.sha][taskName].log
-      if (log.match(/browserstack session: (\w+)/i)) {
+      if (log && log.match(/.*browserstack session: (\w+)/i)) {
         requestBrowserstackSession(RegExp.$1)
       }
     }
@@ -570,7 +570,7 @@ class TaskDetails extends React.Component {
 
 class Browserstack extends React.Component {
   parse() {
-    if (this.props.log.match(/browserstack session: (\w+)/i)) {
+    if (this.props.log.match(/.*browserstack session: (\w+)/i)) {
       return RegExp.$1
     } else {
       return null
@@ -590,7 +590,7 @@ class Browserstack extends React.Component {
         <div style={{
             margin: "1rem 0", display: "flex", justifyContent: "center",
         }}>
-          <video controls width="75%"
+          <video controls height="700px"
             style={{ boxShadow: "0 0 30px grey" }}
             src={session.automation_session.video_url}/>
         </div>
