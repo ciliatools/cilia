@@ -20,7 +20,6 @@ set -eux
 shopt -s nullglob
 
 CILIA_DEPTH=${CILIA_DEPTH-1}
-GIT=${GIT-git}
 
 while true; do
   if [ ! -d "$CILIA_ROOT"/projects ]; then
@@ -31,7 +30,7 @@ while true; do
         if [ ! -d clone ]; then
           if [ -s origin ]; then
             echo === "$project": cloning
-            "$GIT" clone `cat origin` clone
+            git clone `cat origin` clone
           else
             >&2 echo "$project" "has no origin; cannot clone."
           fi
@@ -42,17 +41,17 @@ while true; do
           else
             filter=
           fi
-          if ( cd clone && "$GIT" pull --quiet ); then
+          if ( cd clone && git pull --quiet ); then
             if [ -d "$project"/branches ]; then
               for branch in "$project"/branches/*; do
                 branch=$(basename "$branch")
                 ( cd clone
                   if [ ! -e .git/refs/heads/$branch ]; then
-                    "$GIT" checkout $branch
+                    git checkout $branch
                   fi )
                 commits=$(
                   cd clone
-                  "$GIT" log --pretty=format:%H origin/$branch -- .cilia $filter |
+                  git log --pretty=format:%H origin/$branch -- .cilia $filter |
                   head -n $CILIA_DEPTH
                 )
                 for commit in $commits; do
@@ -60,10 +59,10 @@ while true; do
                     echo === $project: new commit $commit
                     mkdir commits/$commit
                     if ( cd clone
-                         "$GIT" worktree add -B $commit-cilia \
+                         git worktree add -B $commit-cilia \
                            "../commits/$commit/work" origin/$branch
                          cd ../commits/$commit/work
-                         "$GIT" reset --hard $commit )
+                         git reset --hard $commit )
                     then
                       ( cd commits/$commit
                         if [ -d work/.cilia ]; then
