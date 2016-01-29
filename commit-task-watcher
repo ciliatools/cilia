@@ -19,44 +19,9 @@
 set -eu
 shopt -s nullglob
 
-cd "$CILIA_ROOT/projects"
-
 while true; do
   for project in *; do
-    if (
-      cd "$project"
-      if [ -d commits ]; then
-        cd commits
-        for commit in *; do
-          (
-            cd $commit
-            if [ -d config ]; then
-              if [ -d tasks ]; then
-                for task in tasks/*; do
-                  taskname=$(basename "$task")
-                  if [ -s "$task"/request ]; then
-                    request=$(cat "$task"/request)
-                    echo === "$project": "$commit" "$taskname" "$request"
-                    "$CILIA_PATH"/do-task-request \
-                      "$project" "$commit" "$taskname" "$request" \
-                      &
-                  fi
-                done
-              else
-                >&2 echo "$project" "$commit" lacks tasks
-              fi
-            else
-              >&2 echo "$project" "$commit" lacks config
-            fi
-          )
-        done
-      else
-        >&2 echo "$project" lacks commits
-      fi
-    )
-    then true
-    else false
-    fi
+    ./run-commit-tasks "$project"
   done
   sleep 1
 done
