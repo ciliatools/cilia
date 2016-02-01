@@ -20,8 +20,9 @@ set -eu
 shopt -s nullglob
 
 while true; do
-  for project in *; do
-    ./run-commit-tasks "$project"
+  for project in "$CILIA_ROOT"/projects/*; do
+    ./run-commit-tasks `basename "$project"`
+    sleep 2
   done
-  sleep 1
+  sleep 2
 done

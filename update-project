@@ -20,7 +20,7 @@ set -eux
 shopt -s nullglob
 
 project=$1
-cd "$project"
+cd "$CILIA_ROOT"/projects/"$project"
 
 if [ -s commit-filter ]; then
   filter=$(cat commit-filter)
@@ -74,8 +74,8 @@ if [ ! -d clone ]; then
 else
   mkdir -p commits
   if ( cd clone && git pull --quiet ); then
-    if [ -d "$project"/branches ]; then
-      for branch in "$project"/branches/*; do
+    if [ -d branches ]; then
+      for branch in branches/*; do
         branch=$(basename "$branch")
         update-branch
       done
