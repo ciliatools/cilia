@@ -6,7 +6,10 @@ module.exports = {
     filename: "bundle.js"
   },
   plugins: [
-    new (require("html-webpack-plugin")),
+    new (require("html-webpack-plugin"))({
+      title: "Cilia",
+      favicon: "./favicon.ico"
+    }),
     new webpack.ProvidePlugin({
       fetch: "imports?this=>global!exports?global.fetch!whatwg-fetch"
     })
