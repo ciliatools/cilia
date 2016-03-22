@@ -59,6 +59,7 @@ function update-branch {
       if make-worktree-for-commit; then
         "$CILIA_PATH"/initialize-commit "$project" "$branch" "$commit"
       else
+        rm -rf commits/$commit
         >&2 echo "$project": failed to checkout $branch
       fi
     fi
