@@ -1,4 +1,4 @@
-version: 2
+version: '2'
 services:
   proxy:
     build: ../proxy
@@ -24,11 +24,9 @@ services:
       - "./src:/app/src:ro"
     networks:
       - internal
-      
+
 networks:
   cilia:
     external: true
   internal:
     driver: bridge
-
-    
