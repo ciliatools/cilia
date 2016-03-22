@@ -12,4 +12,4 @@ COPY webpack.config.js /app
 WORKDIR /app
 COPY . /app
 RUN /node_modules/.bin/webpack
-RUN http-server -p 80 build
+ENTRYPOINT ["http-server", "-p", "80", "build"]
