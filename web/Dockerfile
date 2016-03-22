@@ -11,5 +11,5 @@ RUN mkdir /app
 COPY webpack.config.js /app
 WORKDIR /app
 COPY . /app
-RUN webpack
+RUN /node_modules/.bin/webpack
 RUN http-server -p 80 build
