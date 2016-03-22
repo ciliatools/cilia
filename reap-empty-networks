@@ -5,7 +5,7 @@ while true; do
       docker network inspect $x
     done
   } |
-  jq -r '.[0] | select(.Name | filter("^cilia.+"))
+  jq -r '.[0] | select(.Name | test("^cilia.+"))
               | select(.Containers | length | . == 0) | .Id' | {
     while read network; do
       echo === $network: removing
