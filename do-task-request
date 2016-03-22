@@ -150,7 +150,7 @@ function wait-using-curl {
     i=0
     until [[ $i == 20 ]]; do
       i=$((i + 1))
-      if curl -I $commit.$(CILIA_HOSTNAME); then
+      if curl -I $commit.$CILIA_HOSTNAME; then
         exit 0
       fi
       sleep 1
