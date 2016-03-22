@@ -2,17 +2,17 @@
  * This file is part of Cilia.
  *
  * Copyright (C) 2016  Mikael Brockman
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -161,9 +161,9 @@ class InstanceRoute extends React.Component {
     let hash = route.instance.commit
     let project = getProject(route.instance.project)
     if (!project) return <Loading {...this.props } />
-    
+
     let commit = getCommit(project, hash)
-    let host = location.host.replace(/^cilia\./, `${hash}.`)
+    let host = location.host.replace(/^cilia\./, `${hash}.cilia.`)
     return (
       <div style={styles.wideRoot}>
         <WideNavBar>
@@ -188,7 +188,7 @@ class TaskPill extends React.Component {
     return {
       started: "rgba(100, 150, 230, 0.7)",
       cancelling: "cyan",
-      cancelled: "darkcyan",        
+      cancelled: "darkcyan",
       succeeded: "rgba(25, 150, 0, 0.4)",
       failed: "rgba(225, 60, 90, 0.8)",
       waiting: "lightgrey",
@@ -203,7 +203,7 @@ class TaskPill extends React.Component {
       ...styles.pill,
       ...{ backgroundColor: this.color(), color: "white" },
     }
-    
+
     return (
       <div style={{ position: "relative", display: "inline-flex" }}
             onMouseEnter={() => this.setState({ open: true }) }
@@ -487,10 +487,10 @@ class CommitRoute extends React.Component {
 
     let taskDetails = this.getTaskDetails()
     if (!taskDetails) return <Loading {...this.props} />
-      
+
     project = getProject(project)
     if (!project) return <Loading {...this.props} />
-    
+
     let commit = getCommit(project, hash)
     return (
       <div style={styles.root}>
@@ -606,12 +606,12 @@ class App extends React.Component {
     super(props)
     this.state = { firstFrame: true }
   }
-  
+
   componentDidMount() {
     // Fade-in animation
     setTimeout(() => this.setState({ firstFrame: false }), 0)
   }
-  
+
   render() {
     let view
     let { route } = this.props
@@ -627,7 +627,7 @@ class App extends React.Component {
       ...styles.container,
       opacity: this.state.firstFrame ? 0 : 1
     }
-    
+
     return (
       <div style={style}>
         {view}

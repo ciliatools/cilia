@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 # This file is part of Cilia.
-# 
+#
 # Copyright (C) 2016  Mikael Brockman
-# 
+#
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Affero General Public License as
 # published by the Free Software Foundation, either version 3 of the
 # License, or (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU Affero General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
@@ -150,7 +150,7 @@ function wait-using-curl {
     i=0
     until [[ $i == 20 ]]; do
       i=$((i + 1))
-      if curl -I $commit.$(hostname); then
+      if curl -I $commit.$(CILIA_HOSTNAME); then
         exit 0
       fi
       sleep 1
@@ -178,7 +178,7 @@ function check-concurrency-limit {
   else
     limit=5 options=""
   fi
-  
+
   count=$(count-started-tasks)
   if [ $count -ge $limit ]; then (
     set -ex
@@ -258,7 +258,7 @@ function do-start {
       clear-pid
       mark-as-finished
       ;;
-    
+
     wait)
       clear-request
       mark-as-started
@@ -269,7 +269,7 @@ function do-start {
       clear-pid
       mark-as-finished
       ;;
-    
+
     *)
       clear-request
       log unknown task type
@@ -301,7 +301,7 @@ case "$request" in
       *) do-stop
     esac
     ;;
-    
+
   *) log unknown request
 esac
 
