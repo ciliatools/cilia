@@ -8,8 +8,10 @@ while true; do
   jq -r '.[0] | select(.Name | startswith("cilia"))
               | select(.Containers | length | . == 0) | .Id' | {
     while read network; do
-      echo === $network: removing
-      docker network rm $network
+      if [ $network != cilia ]; do
+        echo === $network: removing
+        docker network rm $network
+      done
     done
   }
   sleep 5
