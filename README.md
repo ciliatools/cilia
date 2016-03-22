@@ -2,46 +2,91 @@
 
 Cilia combines *staging* and *testing* for **continuous integration
 and QA** of web applications.  It's supposed to be simple, robust, and
-fast.  Uses include
-
-  - building, tagging, and pushing Docker images;
-  - running team-accessible staging servers;
-  - running test suites;
-  - and generally doing stuff with the latest repository commits.
+fast.
 
 The system makes some assumptions:
 
   - your project is in Git;
-  - your project provides the scripts;
+  - you can set up a DNS wildcard entry to the Cilia server;
   - your project can run in Docker Compose with private networking; and
   - your project can run behind a virtual host proxy.
 
-When you add a project to Cilia, it begins to work on the latest
-commits starting at the heads of your chosen branches.  For every
-commit, it triggers a Compose build operation, and then it starts
-containers for the resulting images.  You configure how many commit
-instances to run in parallel; the default is two.
+## System configuration
 
-Once Cilia has started a commit instance, it is published using a
-virtual host proxy that matches subdomains against commit hashes.  For
-example `af1234b12.staging.example.com` would proxy to a commit, given
-that Cilia is running an instance for that commit.  The proxy also
-understands branch references, so that
-`some-branch.staging.example.com` goes to the most recent commit
-instance for `some-branch`.
+You need to set up DNS. Let's say your domain is `example.com`. Then both
 
-**XXX**: Currently only full 40-character hashes work.
+- `cilia.example.com` (the web frontend to Cilia) and
+- `*.cilia.example.com` (proxying to running apps based on commit hash)
 
-At this point you can see the commit instance described in the web
-interface, and click a link to visit the application built from the
-relevant commit.  You can also manually trigger integration test runs,
-Docker Registry operations like tagging and pushing, and custom
-commands defined in the repository configuration.
+should point to the Cilia server.
 
-Of course, you can configure the project to run such steps
-automatically.
+You also need to set some environment variables:
 
-More detailed instructions are coming.
+- `CILIA_ROOT` should be a directory containing your project configuration,
+  where Cilia can also store its work data;
+- `CILIA_PATH` should point to the installation of Cilia itself; and
+- `CILIA_HOSTNAME` should be (for example) `cilia.example.com`.
+
+To use the Browserstack.com integration, set `BROWSERSTACK_USER` and `BROWSERSTACK_KEY`.
+
+## Project configuration
+
+Cilia's project configuration is a file structure at `$CILIA_ROOT/projects`.
+
+Here is an example of configuring the `pet-store` project.
+
+    $ mkdir -p $CILIA_ROOT/projects/pet-store/branches
+    
+We want to test the `master` and `experimental` branches.
+
+    $ touch $CILIA_ROOT/projects/pet-store/branches/{master,experimental}
+
+We set the Git origin from which Cilia will clone and pull:
+
+    $ cat > $CILIA_ROOT/projects/pet-store/origin
+    git@github.com:petstore/app
+
+We only care about commits that modify the `server` or `client`
+directories. (Optional.)
+
+    $ cat > $CILIA_ROOT/projects/pet-store/commit-filter
+    server
+    client
+
+## Repository configuration
+
+There should also be a `.cilia` directory in the root of your project
+repository.
+
+    $ mkdir .cilia
+    $ cd .cilia
+
+Use the root Compose file.
+
+    $ ln -s ../docker-compose.yml docker-compose.yml
+
+Start building automatically when a commit is initialized.    
+
+    $ echo build > on-commit
+    
+Create four named tasks. (Right now, these names are special, but that's a hack.)
+    
+    $ mkdir -p tasks/{build,up,wait,test}
+    
+Configure the number of concurrent tasks per type:
+    
+    $ echo 2 > tasks/build/concurrency # builds are heavy
+    $ echo 15 > tasks/up/concurrency   # but run plenty of instances
+    
+Configure the way tasks lead to one another:
+
+    $ echo up > tasks/build/on-succeeded
+    $ echo wait > tasks/up/on-started
+    $ echo test > tasks/wait/on-succeeded
+    
+Configure which Compose target to run:
+
+    $ echo server > tasks/up/service
 
 ## Processes
 
