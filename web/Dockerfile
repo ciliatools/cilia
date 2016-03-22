@@ -6,10 +6,10 @@ RUN npm install webpack react react-dom html-webpack-plugin \
   whatwg-fetch moment ansi_up \
   babel-loader babel-core babel-preset-es2015 babel-preset-react \
   babel-plugin-transform-object-rest-spread
+RUN npm install -g http-server
 RUN mkdir /app
 COPY webpack.config.js /app
 WORKDIR /app
-ENTRYPOINT ["webpack-dev-server",      \
-  "--port", "80", "--host", "0.0.0.0", \
-  "--inline", \
-  "--progress", "--colors"]
+COPY . /app
+RUN webpack
+RUN http-server -p 80 build
