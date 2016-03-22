@@ -6,7 +6,7 @@ module.exports = {
     filename: "bundle.js"
   },
   plugins: [
-    new require("html-webpack-plugin"),
+    new (require("html-webpack-plugin")),
     new webpack.ProvidePlugin({
       fetch: "imports?this=>global!exports?global.fetch!whatwg-fetch"
     })
