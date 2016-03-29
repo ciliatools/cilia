@@ -166,7 +166,10 @@ function handle(req, res) {
   if (host && host.match(/^([a-z0-9]{40})\..*/)) {
     proxyToContainer(req, res, RegExp.$1)
   } else if (host && host.match(/^cilia\..*/)) {
-    if (!user || user.pass !== process.env["CILIA_WEB_PASSWORD"]) {
+    if (!user
+        || user.pass !== process.env["CILIA_WEB_PASSWORD"]
+        || user.name !== process.env["CILIA_WEB_USERNAME"]
+       ) {
       res.statusCode = 401
       res.setHeader("WWW-Authenticate", 'Basic realm="cilia"')
       res.end("Authentication needed")
