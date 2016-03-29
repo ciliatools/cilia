@@ -237,18 +237,7 @@ function do-start {
       mark-as-finished
       ;;
 
-    say)
-      clear-request
-      mark-as-started
-      run-compose "run --rm"
-      run-task-hook started
-      save-pid
-      await-process-death
-      clear-pid
-      mark-as-finished
-      ;;
-
-    test)
+    say | test | deploy)
       clear-request
       mark-as-started
       run-compose "run --rm"
