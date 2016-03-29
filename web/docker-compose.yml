@@ -6,6 +6,8 @@ services:
       - "80:80"
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
+    environment:
+      - "CILIA_WEB_PASSWORD=${CILIA_WEB_PASSWORD}"
     networks:
       - cilia
       - internal

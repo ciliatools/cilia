@@ -1,18 +1,18 @@
 /*
  * This file is part of Cilia.
- * 
+ *
  * Copyright (C) 2016  Mikael Brockman
- * 
+ *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU Affero General Public License as
  * published by the Free Software Foundation, either version 3 of the
  * License, or (at your option) any later version.
- * 
+ *
  * This program is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU Affero General Public License for more details.
- * 
+ *
  * You should have received a copy of the GNU Affero General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
@@ -25,6 +25,7 @@
 
 var Proxy = require("http-proxy")
 var Docker = require("docker-remote-api")()
+var auth = require("basic-auth")
 
 // Cached map from 40-hex commit hash to container IP.
 // Since Docker container IPs are transient, this cache
@@ -53,7 +54,7 @@ function browse() {
           function(x) { return x.Labels["cilia.expose"] }
 
         ).map(function(container) {
-        
+
           // Grab the `docker inspect` data and look up the IP.
           return new Promise(function(resolve, reject) {
             Docker.get(
@@ -84,7 +85,7 @@ function browse() {
     })
   })
 }
-                    
+
 function getContainerCommit(container) {
   // Look for the commit hash in the container's environment.
   var env = container.Config.Env
@@ -101,7 +102,7 @@ function getContainerIp(container) {
   // the `docker network ls` data.  We try both because the first
   // is faster and we already have that data.  And we need the
   // inspect data to see the labels.
-  
+
   var networks = container.NetworkSettings.Networks
   var ipFromInspect = networks[Object.keys(networks)[0]].IPAddress
   if (ipFromInspect) {
@@ -157,13 +158,19 @@ function getIpForCommit(commit) {
 // Plain Node HTTP server handler.
 // Proxies requests to containers.
 function handle(req, res) {
+  var user = auth(req)
+
   var host = req.headers.host
   var url = req.url
 
   if (host && host.match(/^([a-z0-9]{40})\..*/)) {
     proxyToContainer(req, res, RegExp.$1)
   } else if (host && host.match(/^cilia\..*/)) {
-    if (url.startsWith("/api/")) {
+    if (!user || user.pass !== process.env["CILIA_WEB_PASSWORD"]) {
+      res.statusCode = 401
+      res.setHeader("WWW-Authenticate", 'Basic realm="cilia"')
+      res.end("Authentication needed")
+    } else if (url.startsWith("/api/")) {
       proxyToApi(req, res)
     } else {
       proxyToWebpack(req, res)
