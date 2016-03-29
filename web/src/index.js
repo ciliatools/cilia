@@ -84,7 +84,10 @@ let api = {
   get: url => {
     let request = { method: "GET", url: url }
     change({ ...state, requests: [...state.requests, request] })
-    return fetch(url).then(x => x.json()).then(x => {
+    return fetch(
+      url,
+      { credentials: "same-origin" }
+    ).then(x => x.json()).then(x => {
       change({ ...state, requests: remove(request, state.requests) })
       return x
     })
@@ -95,6 +98,7 @@ let api = {
     return fetch(url, {
       method: "POST",
       body: body,
+      credentials: "same-origin",
       headers: {
         "Content-Type": type || "text/plain",
       },
