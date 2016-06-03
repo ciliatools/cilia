@@ -23,7 +23,7 @@ project=$1
 cd "$CILIA_ROOT"/projects/"$project"
 
 if [ -s commit-filter ]; then
-  filter=$(cat commit-filter)
+  filter="-- .cilia $(cat commit-filter)"
 else
   filter=
 fi
@@ -35,12 +35,16 @@ function ensure-branch-is-tracked {
     fi )
 }
 
+# For a given branch, get the $CILIA_DEPTH latest commits which have
+# changes to .cilia/ or match the commit filter.
 function get-latest-commit-hashes {
   ( cd clone
-    git log --pretty=format:%H origin/$branch -- .cilia $filter |
+    git log --pretty=format:%H origin/$branch $filter |
     head -n $CILIA_DEPTH )
 }
 
+# Separate Git worktrees linked to the same clone are used to
+# checkout several branches.
 function make-worktree-for-commit {
   ( set -eux
     cd clone
@@ -67,6 +71,7 @@ function update-branch {
 }
 
 if [ ! -d clone ]; then
+  # Make the initial clone according to the origin file.
   if [ -s origin ]; then
     echo === "$project": cloning
     git clone `cat origin` clone
@@ -74,6 +79,7 @@ if [ ! -d clone ]; then
     >&2 echo "$project" "has no origin; cannot clone."
   fi
 else
+  # Download the latest commits for every chosen branch.
   mkdir -p commits
   if ( cd clone && git pull --quiet ); then
     if [ -d branches ]; then

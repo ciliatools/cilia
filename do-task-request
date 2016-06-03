@@ -161,7 +161,6 @@ function wait-using-curl {
 }
 
 function count-started-tasks {
-  # Wow, such alignment.
   ( cd "$projectdir"
     grep --recursive      \
          --include status  \
@@ -188,7 +187,6 @@ function check-concurrency-limit {
       excess=$(( limit - count + 1 ))
       log stopping oldest $excess
 
-      # Behold this pipeline.
       grep --include status      \
            --exclude-dir work     \
            --exclude-dir clone     \
@@ -237,17 +235,6 @@ function do-start {
       mark-as-finished
       ;;
 
-    say | test | deploy)
-      clear-request
-      mark-as-started
-      run-compose "run --rm"
-      run-task-hook started
-      save-pid
-      await-process-death
-      clear-pid
-      mark-as-finished
-      ;;
-
     wait)
       clear-request
       mark-as-started
@@ -261,7 +248,14 @@ function do-start {
 
     *)
       clear-request
-      log unknown task type
+      mark-as-started
+      run-compose "run --rm"
+      run-task-hook started
+      save-pid
+      await-process-death
+      clear-pid
+      mark-as-finished
+      ;;
   esac
 }
 
